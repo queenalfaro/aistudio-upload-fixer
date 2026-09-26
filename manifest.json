@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "AI Studio Upload Fixer",
-  "version": "1.1",
-  "description": "Автоматически переименовывает заблокированные файлы (.py, .js, Dockerfile и др.) в .txt перед загрузкой в AI Studio.",
+  "version": "3.0",
+  "description": "Адаптивное мягкое подделывание расширения файлов для Google AI Studio (.txt при отказе сервисом).",
   "browser_specific_settings": {
     "gecko": {
       "id": "aistudio-upload-fixer@local.test"

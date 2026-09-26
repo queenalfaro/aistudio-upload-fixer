@@ -1,49 +1,33 @@
-# AI Studio Upload Fixer
+# AI Studio Upload Fixer (v3.0 Adaptive)
 
-Браузерное расширение (Manifest V3), которое автоматически переименовывает файлы с "заблокированными" расширениями (`.py`, `.js`, `Dockerfile` и др.) в `.txt` перед загрузкой в [Google AI Studio](https://aistudio.google.com), чтобы обойти ошибку `Unsupported file`.
+Браузерное расширение (Manifest V3 под Firefox), реализующее **адаптивное мягкое подделывание расширения файлов** для [Google AI Studio](https://aistudio.google.com).
 
-## Проблема
+В отличие от устаревших подходов со статическими белыми/черными списками расширений, v3.0 **не содержит хардкода**:
+файлы сначала отдаются сервису как есть. Если AI Studio отклоняет файл (неподдерживаемый тип), расширение перехватывает отказ и прозрачно отправляет копию файла с постфиксом `.txt` (MIME `text/plain`). Система автоматически адаптируется под любые типы файлов (`.zig`, `.py`, `.js`, `Dockerfile`, `.env` и др.).
 
-AI Studio разрешает загружать не все типы файлов — исходники на Python, JavaScript, конфиги, `Dockerfile` и т. п. отклоняются как "Unsupported file type". Расширение прозрачно переименовывает такие файлы в `.txt` прямо в браузере перед отправкой, не трогая файлы на диске.
+---
 
-## Как это работает
+## Архитектура и принцип работы (v3.0)
 
-Расширение перехватывает загрузку файлов тремя способами:
+1. **Исходные файлы поступают как есть:**
+   При Drag & Drop или выборе через `<input type="file">` файлы отдаются сервису без предварительного переименования. Если сервис и модель нативно принимают формат (например, `README.md`, `test.js` в Gemini 3.8 Flash), они загружаются с оригинальным именем и расширением.
 
-- **`content.js`** (isolated world) — слушает событие `change` на `<input type="file">` и подменяет `FileList` на новый со переименованными файлами.
-- **`page-world.js`** (main world) — перехватывает:
-  - drag & drop (`drop` событие) с пересборкой `DataTransfer`;
-  - `window.showOpenFilePicker` (File System Access API в Chromium) через `Proxy` над `FileSystemFileHandle`.
+2. **Двухуровневый реактивный перехват отказа (без таймеров и без автокликеров):**
+   - **Уровень 1 (Frontend):** Перехват появления всплывающих контейнеров ошибок (*"doesn't support files of this type"* / *"not all files are supported"* / *"unsupported"*). Тост подавляется, отклонённые файлы определяются по разнице между отправленным батчем и принятыми чипами, конвертируются в `${name}.txt` (`text/plain`) и отправляются в рантайм.
+   - **Уровень 2 (Backend Tokenizer):** Если файл прошёл первичный фильтр фронтенда, но отклонён бэкендом при подсчёте токенов (статус *"Unsupported file"*, класс `.token-status-error`), реактивный `MutationObserver` перехватывает отказ, удаляет сломанный чип и повторно передаёт копию файла с суффиксом `.txt`.
 
-Если у файла "заблокированное" расширение или спец-имя (`Dockerfile`, `Makefile` и т. д.), создаётся копия файла с тем же содержимым, но с именем `<исходное_имя>.txt` и MIME-типом `text/plain`. Файлы, которые и так поддерживаются, не трогаются.
+3. **Сохранение контекста для LLM:**
+   Постфикс `.txt` добавляется к полному имени (`Dockerfile` → `Dockerfile.txt`, `main.zig` → `main.zig.txt`), сохраняя исходное имя и расширение для модели.
 
-### Список блокируемых расширений
+4. **Zero-UI-Loop:**
+   Никаких `setInterval`, фоновых полингов или симуляции многократных кликов. Обработка выполняется строго по событиям DOM и мутациям контейнеров.
 
-`js, jsx, mjs, cjs, ts, tsx, py, pyw, bin, dat, sh, bash, zsh, yml, yaml, toml, ini, cfg, conf, rs, go, java, kt, c, h, cpp, hpp, cc, cs, rb, php, sql, lock, env, gradle, lua, swift, r, dart`
-
-а также файлы без расширения: `Dockerfile, Makefile, Procfile, Gemfile, Containerfile, Jenkinsfile`.
-
-## Установка
-
-### Chrome / Chromium (Edge, Brave и т. д.)
-
-1. Откройте `chrome://extensions`.
-2. Включите «Режим разработчика» (Developer mode).
-3. Нажмите «Загрузить распакованное расширение» (Load unpacked) и выберите папку проекта.
-
-### Firefox
-
-1. Откройте `about:debugging#/runtime/this-firefox`.
-2. Нажмите «Load Temporary Add-on» и выберите файл `manifest.json`.
+---
 
 ## Файлы проекта
 
-| Файл | Назначение |
+| Файл | Описание |
 |---|---|
-| `manifest.json` | Манифест расширения (MV3), список content-скриптов |
-| `content.js` | Перехват `<input type="file">` в изолированном контексте |
-| `page-world.js` | Перехват drag & drop и File System Access API в контексте страницы |
-
-## Лицензия
-
-Не указана.
+| `manifest.json` | Манифест MV3 для Firefox (`gecko.id: aistudio-upload-fixer@local.test`), регистрация `page-world.js` в `MAIN` world |
+| `page-world.js` | Основная логика: кэширование файлов, сквозная передача, реактивный `MutationObserver` для перехвата frontend/backend отказов |
+| `content.js` | Скрипт изолированного контекста (`ISOLATED` world) |
