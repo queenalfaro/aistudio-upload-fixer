@@ -1,0 +1,26 @@
+# OS & editor artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.env
+.venv/
+venv/
+
+# Test artifacts & media (strictly prohibit committing screenshots or logs)
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.mp4
+*.gif
+*.log
+*.tmp

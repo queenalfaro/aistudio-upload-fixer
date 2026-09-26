@@ -1,7 +1,10 @@
 import asyncio
 import json
-import base64
+import os
+from pathlib import Path
 import websockets
+
+REPO_DIR = Path(__file__).resolve().parent
 
 async def run_live_test():
     async with websockets.connect('ws://127.0.0.1:9222/session') as ws:
@@ -25,7 +28,7 @@ async def run_live_test():
             inst = await call('webExtension.install', {
                 'extensionData': {
                     'type': 'path',
-                    'path': r'C:\Users\user\data\0x\aistudio-upload-fixer'
+                    'path': str(REPO_DIR)
                 }
             })
             print("   Extension installed:", inst.get('result'))
@@ -194,16 +197,10 @@ async def run_live_test():
                 vals = dict((x[0], x[1]['value']) for x in chip['value'])
                 print("   *", vals)
 
-            print("\nCapturing native tab screenshot...")
-            shot = await call('browsingContext.captureScreenshot', {'context': ai_ctx})
-            screenshot_path = r'C:\Users\user\data\0x\aistudio-upload-fixer\live_test_result.png'
-            with open(screenshot_path, 'wb') as f:
-                f.write(base64.b64decode(shot['result']['data']))
-            print(f"Screenshot successfully saved to: {screenshot_path}")
-
         finally:
             print("\nEnding BiDi session...")
             await call('session.end', {})
             print("Session cleanly ended.")
 
-asyncio.run(run_live_test())
+if __name__ == '__main__':
+    asyncio.run(run_live_test())
