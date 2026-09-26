@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "AI Studio Upload Fixer",
-  "version": "3.0",
-  "description": "Адаптивное мягкое подделывание расширения файлов для Google AI Studio (.txt при отказе сервисом).",
+  "version": "4.0",
+  "description": "Нативный 100% перехват в памяти рантайма JavaScript без использования DOM-наблюдателей, кликов по кнопкам и двойных сетевых загрузок.",
   "browser_specific_settings": {
     "gecko": {
       "id": "aistudio-upload-fixer@local.test"
